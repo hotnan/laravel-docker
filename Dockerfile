@@ -1,13 +1,44 @@
-FROM eboraas/apache-php
+FROM php:5.6-apache
 MAINTAINER axf <2792938834@qq.com>
-
-RUN apt-get update && apt-get -y install git curl php5-mcrypt php5-json && apt-get -y autoremove && apt-get clean && rm -rf /var/lib/apt/lists/*
-
-RUN /usr/sbin/a2enmod rewrite
-
-ADD 000-laravel.conf /etc/apache2/sites-available/
-ADD 001-laravel-ssl.conf /etc/apache2/sites-available/
-RUN /usr/sbin/a2dissite '*' && /usr/sbin/a2ensite 000-laravel 001-laravel-ssl
-
-RUN mkdir /var/www/laravel
-
+RUN a2enmod rewrite
+WORKDIR /var/www
+RUN apt-get update && apt-get install --no-install-recommends -y \
+    git \
+    libgmp10 \
+    libgmp-dev \
+    mysql-client \
+    zlib1g-dev \
+    && ln -s /usr/include/x86_64-linux-gnu/gmp.h /usr/include/gmp.h \
+    && docker-php-ext-install -j$(nproc) \
+    bcmath \
+    gmp \
+    mbstring \
+    mysql \
+    pdo \
+    pdo_mysql \
+    zip \
+    && pecl install spl_types \
+    && docker-php-ext-enable spl_types \
+    && curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer \
+    && composer create-project \
+    --no-ansi \
+    --no-dev \
+    --no-interaction \
+    --no-progress \
+    --prefer-dist \
+    laravel/laravel /var/www/html 5.1.* \
+    && rm -f /var/www/html/database/migrations/*.php \
+    /var/www/html/app/Users.php \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+RUN chown -R www-data:www-data /var/www/html
+RUN sed -i 's/DocumentRoot \/var\/www\/html/DocumentRoot \/var\/www\/html\/public/g' /etc/apache2/apache2.conf
+ONBUILD RUN composer self-update \
+        && cd /var/www/html \
+        && composer update \
+        --no-ansi \
+        --no-dev \
+        --no-interaction \
+        --no-progress \
+        --prefer-dist
+WORKDIR /var/www/html
