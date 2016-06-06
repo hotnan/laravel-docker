@@ -3,6 +3,7 @@ MAINTAINER axf <2792938834@qq.com>
 RUN a2enmod rewrite
 WORKDIR /var/www
 RUN apt-get update && apt-get install --no-install-recommends -y \
+    php5-pgsql \
     git \
     libgmp10 \
     libgmp-dev \
